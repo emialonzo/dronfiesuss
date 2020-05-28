@@ -38,7 +38,7 @@ jobs:
     - run: sleep 10
 
     - name: run app
-      run: npm run test
+      run: npm run cover
     
     - run: ls -lah > salida.prueba
 
