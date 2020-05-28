@@ -40,7 +40,7 @@ jobs:
     - name: run app
       run: npm run test
     
-    - run: ls
+    - run: ls -lah
 
     - run: ls coverage
 
