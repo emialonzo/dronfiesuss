@@ -31,25 +31,15 @@ jobs:
       with:
         node-version: '10.19.0'
 
-
-      
     - run: npm install
     
-    - run: sleep 10
-
     - name: run app
       run: npm run cover
-    
-    - run: ls -lah > salida.prueba
-
-    - run: ls coverage
-    
-    - run: cat salida.prueba
 
     - name: Coveralls GitHub Action
       uses: coverallsapp/github-action@v1.1.1
       with:
         # 
-        github-token: aaOgzZXrfQU6Lm1SES8Zc0WS5TqjyfWX3
+        github-token: ${{ secrets.githubtoken }} 
 
 
