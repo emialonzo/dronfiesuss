@@ -29,8 +29,8 @@ jobs:
       with:
         path: .coveralls.yml
         contents: |
-          echo "service_name: travis-ci"
-          echo "repo_token: aaOgzZXrfQU6Lm1SES8Zc0WS5TqjyfWX3"
+          service_name: travis-ci
+          repo_token: aaOgzZXrfQU6Lm1SES8Zc0WS5TqjyfWX3
         write-mode:   overwrite
 
     - run: cat .coveralls.yml
