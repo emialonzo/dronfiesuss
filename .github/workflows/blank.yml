@@ -24,22 +24,22 @@ jobs:
 
     - uses: actions/checkout@v2
       
-    - name: Build the stack
-      run: docker-compose up -d
-
-    - uses: actions/setup-node@v2-beta
+    - uses: DamianReeves/write-file-action
       with:
-        node-version: '10.19.0'
+        path: ${{ env.home}}/.bashrc
+        contents: |
+          echo "Hello World!"
+        write-mode: append  
+        
+    - uses: DamianReeves/write-file-action
+      with:
+        path: .coveralls.yml
+        contents: |
+          echo "service_name: travis-ci"
+          echo "repo_token: aaOgzZXrfQU6Lm1SES8Zc0WS5TqjyfWX3"
+        write-mode: append  
 
-    - run: npm install
+    - run: cat .coveralls.yml
     
-    - name: run app
-      run: npm run cover
-
-    - name: Coveralls GitHub Action
-      uses: coverallsapp/github-action@v1.1.1
-      with:
-        # 
-        github-token: ${{ secrets.githubtoken }} 
 
 
