@@ -34,3 +34,17 @@ jobs:
         write-mode:   overwrite
 
     - run: cat .coveralls.yml
+    
+    - name: Build the stack
+      run: docker-compose up -d
+
+    - uses: actions/setup-node@v2-beta
+      with:
+        node-version: '10.19.0'
+
+    - run: npm install
+    
+    - name: run app
+      run: npm run coverage
+
+
