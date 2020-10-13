@@ -61,7 +61,7 @@ jobs:
            "port": 5432,
            "username": "test",
            "password": "test",
-           "database": "test",
+           "database": "app",
            "synchronize": true,
            "dropSchema": true,
            "logging": false,
