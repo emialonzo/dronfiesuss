@@ -72,11 +72,100 @@ export class UserController {
         try {
             if (role == Role.ADMIN) {
                 let user: User = request.body
+                let status : UserStatus = request.body.status
+                if(status == undefined){
+                    status  = new UserStatus()
+                    status.status = Status.UNCONFIRMED
+                    status.token = generateToken();
+                    user.status = status
+                }
                 // trimFields(user)
                 let errors = validateUser(user)
                 if (errors.length == 0) {
+                    let s = await this.userStatusDao.save(status)   
                     user.password = hashPassword(user.password)
                     let insertedDetails = await this.dao.save(user)
+                    return response.json(user);
+                } else {
+                    response.status(400)
+                    return response.json(errors)
+                }
+            }
+            else {
+                return response.sendStatus(401)
+            }
+        } catch (error) {
+            response.status(400)
+            return response.json({ "Error": "Insert fail" })
+        }
+    }
+
+    /**
+     * Updates an User, in a PUT method, or creates it, given the username is valid
+     * Only admins can update an user, unless it's an user updating their own information.
+     * @example {
+     *          username: "AnOtherUserToInsert",
+     *          email: `anotherusertoinsert@dronfies.com`,
+     *          firstName: `Any`,
+     *          lastName: `Name`,
+     *          password: `password`,
+     *          role: Role.PILOT
+     *      }
+     * @param request 
+     * @param response 
+     * @param next 
+     */
+    async updateUser(request: Request, response: Response, next: NextFunction) {
+        let { role, username } = getPayloadFromResponse(response)
+        try {
+            if (role == Role.ADMIN || (username == request.params.id)) {
+                let user: User = request.body
+                // trimFields(user)
+                let errors = validateUser(user)
+                if (errors.length == 0) {
+                    user.username = request.params.id
+                    //user.password = hashPassword(user.password)
+                    let insertedDetails = await this.dao.update(user)
+                    return response.json(user);
+                } else {
+                    response.status(400)
+                    return response.json(errors)
+                }
+            }
+            else {
+                return response.sendStatus(401)
+            }
+        } catch (error) {
+            response.status(400)
+            return response.json({ "Error": "Insert fail" })
+        }
+    }
+
+    /**
+     * Updates an User's password
+     * @example {
+     *          username: "AnOtherUserToInsert",
+     *          email: `anotherusertoinsert@dronfies.com`,
+     *          firstName: `Any`,
+     *          lastName: `Name`,
+     *          password: `password`,
+     *          role: Role.PILOT
+     *      }
+     * @param request 
+     * @param response 
+     * @param next 
+     */
+    async updateUserPassword(request: Request, response: Response, next: NextFunction) {
+        let { role, username } = getPayloadFromResponse(response)
+        try {
+            if (role == Role.ADMIN || (username == request.params.id)) {
+                let user: User = request.body
+                // trimFields(user)
+                let errors = validateUser(user)
+                if (errors.length == 0) {
+                    user.username = request.params.id
+                    user.password = hashPassword(user.password)
+                    let insertedDetails = await this.dao.update(user)
                     return response.json(user);
                 } else {
                     response.status(400)
@@ -110,8 +199,9 @@ export class UserController {
     async userRegister(request: Request, response: Response, next: NextFunction) {
         try {
             let user: User = request.body
+            const origin = request.headers.origin
 
-            user.role = Role.PILOT;
+            user.role = user.role || Role.PILOT;
 
 
             let status = new UserStatus()
@@ -119,14 +209,16 @@ export class UserController {
             status.token = generateToken();
             
             user.status = status
-            
+
+            console.log("Register request", request.headers.origin);
+
             let errors = validateUser(user)
             if (errors.length == 0) {
                 //TODO do transaction with this two saves
                 let s = await this.userStatusDao.save(status)   
                 user.password = hashPassword(user.password)
                 let insertedDetails = await this.dao.save(user)
-                sendMailToConfirm(user, status)
+                sendMailToConfirm(user, status, origin)
                 return response.json(user);
             } else {
                 response.status(400)
@@ -134,6 +226,7 @@ export class UserController {
             }
             
         } catch (error) {
+            console.log("Register error", error)
             response.status(400)
             return response.json({ "Error": "Insert fail" })
         }
@@ -234,9 +327,9 @@ function generateToken(): String {
     return hashPassword(d.toUTCString())
 }
 
-function sendMailToConfirm(user: User, status:UserStatus){
-    let confirmSubjcet = "Confirm registered user on dronfies utm"
-    let link = buildConfirmationLink(user.username, status.token, frontEndUrl)
+function sendMailToConfirm(user: User, status:UserStatus, url){
+    let confirmSubjcet = `${user.firstName}, please confirm your new PortableUTM user`
+    let link = buildConfirmationLink(user.username, status.token, url)
     let textContent = buildConfirmationTextMail(user.username, link)
     let htmlContent = buildConfirmationHtmlMail(user.username, link)
     

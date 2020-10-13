@@ -16,6 +16,7 @@ import { OperationState, Operation } from "../../src/entities/Operation";
 import { TEST_TIMEOUT } from "../conf";
 import { OperationDao } from "../../src/daos/OperationDaos";
 import { ApprovalDao } from "../../src/daos/ApprovalDao";
+import { Users } from "../../src/data/users_data";
 
 
 describe(' >>> Operation test <<< ', function () {
@@ -25,7 +26,10 @@ describe(' >>> Operation test <<< ', function () {
         this.timeout(TEST_TIMEOUT);
 
         initAsync()
-            .then(done)
+            // .then(done)
+            .then((function (application) {
+                done()
+            }))
             .catch(done)
     })
 
@@ -75,18 +79,14 @@ describe(' >>> Operation test <<< ', function () {
 
 
     it("Should not get all operations if user role is not ADMIN", function (done) {
-        // let user = Users[2]
-        // let token = getToken(user.email, user.username, user.role)
         let token = getToken('maurine@dronfies.com', 'MaurineFowlie', Role.PILOT)
 
         chai.request(app.app)
             .get('/operation')
-            // .set('bypass', 'a')
             .set('auth', token)
             .set('Accept', 'application/json')
             .then(function (res) {
                 res.should.have.status(401);
-                // res.body.length.should.be.eq(4)
                 done();
             })
             .catch(done)
@@ -94,15 +94,25 @@ describe(' >>> Operation test <<< ', function () {
     });
 
     it("Should get 2 operations by creator MaurineFowlie", function (done) {
-        // let user = Users[2]
         let token = getToken('maurine@dronfies.com', 'MaurineFowlie', Role.PILOT)
-        // let token = getToken(user.email, user.username, user.role)
         chai.request(app.app)
             .get('/operation/creator')
-            // .set('bypass', 'a')
             .set('auth', token)
             .set('Accept', 'application/json')
-            // .expect('Content-Type', /json/)
+            .then(function (res) {
+                res.should.have.status(200);
+                res.body.ops.length.should.be.eq(0)
+                done();
+            })
+            .catch(done)
+    });
+
+    it("Should get 2 operations by creator MaurineFowlie", function (done) {
+        let token = getToken('maurine@dronfies.com', 'MaurineFowlie', Role.PILOT)
+        chai.request(app.app)
+            .get('/operation/owner')
+            .set('auth', token)
+            .set('Accept', 'application/json')
             .then(function (res) {
                 res.should.have.status(200);
                 res.body.ops.length.should.be.eq(2)
@@ -110,6 +120,8 @@ describe(' >>> Operation test <<< ', function () {
             })
             .catch(done)
     });
+
+
 
     it("Should get 0 operations by creator TrulaRemon", function (done) {
         let token = getToken('trula@dronfies.com', 'TrulaRemon', Role.PILOT)
@@ -171,6 +183,8 @@ describe(' >>> Operation test <<< ', function () {
         it("Should pass an operation in pending to accepted", function (done) {
             let token = getToken('admin@dronfies.com', 'admin', Role.ADMIN)
             let op = deepCopy(Operations[0])
+            delete op.gufi
+
             let newGufi = '6703cf4f-cf7f-4175-aaf4-aee02d59f3a3'
 
             op.gufi = newGufi
@@ -186,15 +200,15 @@ describe(' >>> Operation test <<< ', function () {
                 chai.request(app.app)
                     .post(`/operation/${newGufi}/pendingtoaccept`)
                     .set('auth', token)
-                    .send({ comments:"", approved:true})
+                    .send({ comments: "", approved: true })
                     .set('Accept', 'application/json')
                     .then(function (res) {
                         res.should.have.status(200);
                         console.log(res.body)
                         opDao.one(newGufi).then(function (op) {
                             op.state.should.eq(OperationState.ACCEPTED)
-                            approvalDao.one(res.body.id).then(function(app){
-                                app.operation.gufi.should.eq(newGufi)  
+                            approvalDao.one(res.body.id).then(function (app) {
+                                app.operation.gufi.should.eq(newGufi)
                                 // app.operation.gufi.should.eq()  
                                 // app.operation.gufi.should.eq(newGufi)  
                                 done();
@@ -207,13 +221,15 @@ describe(' >>> Operation test <<< ', function () {
         it("Should pass an operation in pending to CLOSED", function (done) {
             let token = getToken('admin@dronfies.com', 'admin', Role.ADMIN)
             let op = deepCopy(Operations[0])
+            delete op.gufi
+
             let newGufi = 'd835b903-a62d-4ccd-a711-d1ee49dd09a5'
 
             op.gufi = newGufi
             op.uas_registrations = []
             op.flight_comments = "For automate Testing operation "
             op.state = OperationState.PENDING
-            op.operation_volumes[0].operation_geography = {"type":"Polygon","coordinates":[[[-56.194038,-34.904657],[-56.193523,-34.908669],[-56.188545,-34.90698],[-56.188889,-34.902052],[-56.194038,-34.904657]]]}
+            op.operation_volumes[0].operation_geography = { "type": "Polygon", "coordinates": [[[-56.194038, -34.904657], [-56.193523, -34.908669], [-56.188545, -34.90698], [-56.188889, -34.902052], [-56.194038, -34.904657]]] }
 
             const opDao = new OperationDao();
             const approvalDao = new ApprovalDao()
@@ -222,15 +238,15 @@ describe(' >>> Operation test <<< ', function () {
                 chai.request(app.app)
                     .post(`/operation/${newGufi}/pendingtoaccept`)
                     .set('auth', token)
-                    .send({ comments:"", approved:false})
+                    .send({ comments: "", approved: false })
                     .set('Accept', 'application/json')
                     .then(function (res) {
                         res.should.have.status(200);
                         console.log(res.body)
                         opDao.one(newGufi).then(function (op) {
                             op.state.should.eq(OperationState.CLOSED)
-                            approvalDao.one(res.body.id).then(function(app){
-                                app.operation.gufi.should.eq(newGufi)  
+                            approvalDao.one(res.body.id).then(function (app) {
+                                app.operation.gufi.should.eq(newGufi)
                                 done();
                             }).catch(done)
                         }).catch(done)
@@ -241,6 +257,8 @@ describe(' >>> Operation test <<< ', function () {
         it("Should not accept operation beacause the sate was NOT_ACCPETED", function (done) {
             let token = getToken('admin@dronfies.com', 'admin', Role.ADMIN)
             let op = deepCopy(Operations[0])
+            delete op.gufi
+
             let newGufi = '9383cf4f-cf7f-4175-aaf4-aee42d23e6b4'
 
             op.gufi = newGufi
@@ -272,6 +290,9 @@ describe(' >>> Operation test <<< ', function () {
         let token = getToken('trula@dronfies.com', 'TrulaRemon', Role.PILOT)
         let op = deepCopy(Operations[0])
         delete op.gufi
+        
+        op.owner = Users[0]
+
         op.uas_registrations = []
         op.flight_comments = "For automate Testing operation "
         op.state = OperationState.PROPOSED
@@ -382,6 +403,8 @@ describe(' >>> Operation test <<< ', function () {
         it("POST /operation should not create a new operation when passing invalid max (min) altitude", function (done) {
             let token = getToken('trula@dronfies.com', 'TrulaRemon', Role.PILOT)
             let op: Operation = deepCopy(Operations[0])
+            delete op.gufi
+
             op.operation_volumes[0].max_altitude = -1
             op.flight_comments = "For automate Testing operation "
             op.operation_volumes[0].operation_geography = { "type": "Polygon", "coordinates": [[[-56.16193771362305, -34.90275631306831], [-56.161251068115234, -34.90662777287992], [-56.154985427856445, -34.906486995721075], [-56.155757904052734, -34.90233396095623], [-56.16193771362305, -34.90275631306831]]] }
@@ -532,4 +555,33 @@ describe(' >>> Operation test <<< ', function () {
 
     })
 
+
+    describe(' Operation pagination ', function () {
+        it("should get the two operations in diferent pages", function (done) {
+            let token = getToken('maurine@dronfies.com', 'MaurineFowlie', Role.PILOT)
+            chai.request(app.app)
+                .get('/operation/owner')
+                .query({ limit: 1, offset: 0 })
+                .set('auth', token)
+                .set('Accept', 'application/json')
+                .then(function (res) {
+                    res.should.have.status(200);
+                    res.body.ops.length.should.be.eq(1)
+                    let gufi1 = res.body.ops[0].gufi
+                    chai.request(app.app)
+                        .get('/operation/owner')
+                        .query({ limit: 1, offset: 1 })
+                        .set('auth', token)
+                        .set('Accept', 'application/json')
+                        .then(function (res) {
+                            res.should.have.status(200);
+                            res.body.ops.length.should.be.eq(1)
+                            res.body.ops[0].gufi.should.not.eq(gufi1)
+                            done();
+                        })
+                        .catch(done)
+                })
+                .catch(done)
+        });
+    })
 });

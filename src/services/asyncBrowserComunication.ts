@@ -4,18 +4,26 @@ import { User } from "../entities/User";
 
 
 function send(topic, object){
-    if(process.env.NODE_ENV != "test"){
+    console.log(`Sending ${JSON.stringify(object)} to ${topic}`)
+    // if(process.env.NODE_ENV != "test"){
+    //     app.io.emit(topic, object)
+    // } else {
+    //     return [topic, object]
+    // }
+
+    if(app.io != undefined) {
         app.io.emit(topic, object)
-    } else {
+    }else{
+        console.log(`app.io is undefined`)
         return [topic, object]
     }
 
 }
 
 
-export function sendPositionToMonitor(position ){
+export function sendPositionToMonitor(position, controller_location){
     // app.io.emit('new-position', position)
-    return send('new-position', position)
+    return send('new-position', {...position, controller_location})
 }
 
 export function sendOperationFlyStatus(inOperation ){
@@ -26,6 +34,10 @@ export function sendOperationFlyStatus(inOperation ){
 export function sendOpertationStateChange(operationInfo){
     // app.io.emit('position-status', inOperation)
     return send('operation-state-change', operationInfo)
+}
+
+export function sendNewOperation(operationInfo){
+    return send('new-operation', operationInfo)
 }
 
 

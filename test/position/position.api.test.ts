@@ -5,6 +5,7 @@ let chaiHttp = require('chai-http');
 chai.use(chaiHttp);
 chai.should();
 import { PositionDao } from "../../src/daos/PositionDao";
+// import { OperationDao } from "../../src/daos/OperationDaos";
 import { app, initAsync } from "../../src/index";
 
 import { getToken } from "../../src/services/tokenService";
@@ -17,10 +18,14 @@ import { OperationDao } from "../../src/daos/OperationDaos";
 
 describe('>>> Position entity <<< ', function () {
 
+
     before(function (done) {
         this.timeout(TEST_TIMEOUT);
         initAsync()
-            .then(done)
+            // .then(done)
+            .then((function (application) {
+                done()
+            }))
             .catch(done)
     })
 
@@ -43,6 +48,8 @@ describe('>>> Position entity <<< ', function () {
             let gufi = "c42e9384-14d2-9b6b-1c1c-1c3c8aaa2b99"
             let opDao = new OperationDao()
             let op = deepCopy(Operations[0])
+            delete op.gufi
+
             op.gufi = gufi
             op.uas_registrations = []
             op.flight_comments = "For automate Testing operation and position"
@@ -122,6 +129,8 @@ describe('>>> Position entity <<< ', function () {
             let gufi = "d12e9172-14d2-9b6b-7b7b-1c3c8ccc1e12"
             let opDao = new OperationDao()
             let op = deepCopy(Operations[0])
+            delete op.gufi
+
             op.gufi = gufi
             op.uas_registrations = []
             op.flight_comments = "For automate Testing operation and altitude"
@@ -232,9 +241,9 @@ describe('>>> Position entity <<< ', function () {
 
 
     //TODO check operation change it status
-    it("should insert a new position outside operation", function (done) {
+    it("POST /position should insert a new position outside operation", function (done) {
         let token = getToken('admin@dronfies.com', 'admin', Role.ADMIN)
-        let dao = new PositionDao()
+        // let dao = new PositionDao()
         let positionToInsert = {
             "altitude_gps": 30,
             "location": {
@@ -329,7 +338,95 @@ describe('>>> Position entity <<< ', function () {
             .catch(done)
     });
 
+    describe('>>> Position without gufi <<< ', function () {
+        it("/POST ", function (done) {
+            let token = getToken('admin@dronfies.com', 'admin', Role.ADMIN)
+            // let dao = new PositionDao()
+            let positionToInsert = {
+                "altitude_gps": 30,
+                "location": {
+                    "type": "Point",
+                    "coordinates": [
+                        -56.1636114120483,
+                        -34.9068213410793
+                    ]
+                },
+                "time_sent": "2019-12-11T20:39:10.000Z",
+                "uvin": "f7891e78-9bb4-431d-94d3-1a506910c254",
+                "heading": 0
+            }
+            chai.request(app.app)
+                .post('/position/drone')
+                .set('auth', token)
+                .send(positionToInsert)
+                .then(function (res) {
+                    res.should.have.status(400);
+                    done();
+                })
+                .catch(done);
+        });
 
+        it("/POST ", function (done) {
+            let token = getToken('admin@dronfies.com', 'admin', Role.ADMIN)
+            let positionToInsert = {
+                "altitude_gps": 30,
+                "location": {
+                    "type": "Point",
+                    "coordinates": [
+                        -56.1636114120483,
+                        -34.9068213410793
+                    ]
+                },
+                "time_sent": "2019-12-11T20:39:10.000Z",
+                "uvin": "a26fdc00-8626-4b08-8b9e-5c50da12fff1",
+                "heading": 0
+            }
+            // let opDao = new OperationDao()
+            // opDao.updateState('b92c7431-13c4-4c6c-9b4a-1c3c8eec8c63', OperationState.ACTIVATED).then(
+            //     (res) => {
+            chai.request(app.app)
+                .post('/position/drone')
+                .set('auth', token)
+                .send(positionToInsert)
+                .then(function (res) {
+                    res.should.have.status(400);
+                    done();
+                })
+                .catch(done);
+            // }).catch(done)
+            // });
+        })
+
+        it.skip("/POST ", function (done) {
+            let token = getToken('admin@dronfies.com', 'admin', Role.ADMIN)
+            let positionToInsert = {
+                "altitude_gps": 30,
+                "location": {
+                    "type": "Point",
+                    "coordinates": [
+                        -56.1636114120483,
+                        -34.9068213410793
+                    ]
+                },
+                "time_sent": "2019-12-11T20:39:10.000Z",
+                "uvin": "a26fdc00-8626-4b08-8b9e-5c50da12fff1",
+                "heading": 0
+            }
+            let opDao = new OperationDao()
+            opDao.updateState('b92c7431-13c4-4c6c-9b4a-1c3c8eec8c63', OperationState.ACTIVATED).then(
+                (res) => {
+                    chai.request(app.app)
+                        .post('/position/drone')
+                        .set('auth', token)
+                        .send(positionToInsert)
+                        .then(function (res) {
+                            res.should.have.status(200);
+                            done();
+                        })
+                        .catch(done);
+                }).catch(done)
+        });
+    })
 
 
 });

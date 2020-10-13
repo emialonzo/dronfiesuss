@@ -8,7 +8,7 @@ import { validateStringDateIso, dateTimeStringFormat } from "../utils/validation
 import { UserDao } from "../daos/UserDaos";
 import { ApprovalDao } from "../daos/ApprovalDao";
 
-import { sendOpertationStateChange } from "../services/asyncBrowserComunication";
+import { sendOpertationStateChange, sendNewOperation } from "../services/asyncBrowserComunication";
 import { OperationVolume } from "../entities/OperationVolume";
 
 
@@ -49,9 +49,12 @@ export class OperationController {
         } else {
           ops = await this.dao.all({ state: state })
         }
+        // console.log('!!!!!!!!! Operations !!!!!!!!!!')
+        // console.log(`**** ${JSON.stringify(ops.map(op=>{return {name:op.name, gufi:op.gufi, owner:op.owner}}), null, 2)}`)
         return response.json({ count: ops.length, ops })
 
       } catch (error) {
+        console.error(` -_-_-_-_-_-_-_-> ${JSON.stringify(error)}`)
         return response.sendStatus(400)
       }
     }
@@ -78,7 +81,7 @@ export class OperationController {
       if (role == Role.ADMIN) {
         return response.json(await this.dao.one(request.params.id));
       } else {
-        let v = await this.dao.oneByCreator(request.params.id, username);
+        let v = await this.dao.oneByOwner(request.params.id, username);
         return response.json(v)
       }
     } catch (error) {
@@ -153,8 +156,9 @@ export class OperationController {
    * @param next 
    */
   async save(request: Request, response: Response, next: NextFunction) {
-    let { username, role } = response.locals.jwtPayload
+    let { role, usernameFromRequest } = response.locals.jwtPayload
     let errors = validateOperation(request.body)
+    let username = request.body.owner
     try {
       for (let index = 0; index < request.body.uas_registrations.length; index++) {
         const element = request.body.uas_registrations[index];
@@ -165,11 +169,19 @@ export class OperationController {
     } catch (error) {
       errors.push(`The selected vehicle doesn't exists or you no are the owner.`)
     }
-    request.body.creator = username
+    // request.body.creator = username
+    request.body.creator = usernameFromRequest
     request.body.state = OperationState.PROPOSED
 
     if (errors.length == 0) {
-      return response.json(await this.dao.save(request.body));
+      try {
+        let operation = <Operation>await this.dao.save(request.body)
+        sendNewOperation({gufi: operation.gufi})
+        return response.json(operation);
+      } catch (error) {
+        response.status(400)
+        return response.json(error)
+      }
     } else {
       response.status(400)
       return response.json(errors)
@@ -210,6 +222,30 @@ export class OperationController {
     }
   }
 
+  async updateState(request: Request, response: Response, next: NextFunction) {
+    let gufi = request.params.id
+    let newState = request.body.state
+
+    console.log(`Gufi::${gufi}, ->${JSON.stringify(request.body)}`)
+    try {
+      let { role, username } = getPayloadFromResponse(response)
+
+      if (role == Role.ADMIN) {
+        // let result = await this.dao.updateStateWhereState(gufi, OperationState.PENDING, OperationState.ACCEPTED);
+        let result = await this.dao.updateState(gufi, newState);
+        changeState({
+          gufi: gufi,
+          state: newState
+        })
+        return response.json(result);
+      } else {
+        return response.sendStatus(401)
+      }
+    } catch (error) {
+      return response.sendStatus(404)
+    }
+  }
+
   private async addNewAproval(username, operationGufi, comments, approved) {
     let appr = {
       user: {username},
@@ -242,7 +278,22 @@ export class OperationController {
   async operationsByCreator(request: Request, response: Response, next: NextFunction) {
     let { username, role } = response.locals.jwtPayload
     let ops;
-    ops = await this.dao.operationsByCreator(username)
+    // let state = request.query.state
+
+    ops = await this.dao.operationsByCreator(username, request.query)
+    return response.json({ count: ops.length, ops });
+  }
+
+  /**
+   * Returns Operations owned by current user
+   * @param request
+   * @param response
+   * @param next
+   */
+  async operationsByOwner(request: Request, response: Response, next: NextFunction) {
+    let { username, role } = response.locals.jwtPayload
+    let ops;
+    ops = await this.dao.operationsByOwner(username, request.query)
     return response.json({ count: ops.length, ops });
   }
 
@@ -281,6 +332,9 @@ function validateOperation(operation: any) {
   let errors = []
   // let op: Operation = operation
   let op = operation
+  if(!op.owner){
+    errors.push(`Owner is a mandatory field`)
+  }
   if (op.operation_volumes.length != 1) {
     errors.push(`Operation must have only 1 volume and has ${op.operation_volumes.length}`)
   } else {

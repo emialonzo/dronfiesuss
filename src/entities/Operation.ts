@@ -7,6 +7,8 @@ import { VehicleReg } from "./VehicleReg";
 import { ContingencyPlan } from "./ContingencyPlan";
 import { NegotiationAgreement } from "./NegotiationAgreement";
 import { PriorityElements } from "./PriorityElements";
+// import { OperationIntersections } from "./OperationIntersection";
+// import { OperationCanceledException } from "typescript";
 
 type operations_vol = Array<OperationVolume>;
 
@@ -40,7 +42,7 @@ type operations_vol = Array<OperationVolume>;
     See USS Specification for requirements to transition to this state.
  */
 export enum OperationState {
-     PROPOSED = "PROPOSED"
+    PROPOSED = "PROPOSED"
     , ACCEPTED = "ACCEPTED"
     , ACTIVATED = "ACTIVATED"
     , CLOSED = "CLOSED"
@@ -60,6 +62,16 @@ export enum OperatonFaaRule {
 export class Operation {
     @PrimaryGeneratedColumn("uuid")
     'gufi': string;
+
+    // Obligatorio - ya no se usa flight_comments como titulo
+    @Column()
+    'name': string;
+
+    // Owner - a quien le pertenece la operación
+    @ManyToOne(type => User, {
+        eager: true
+    })
+    'owner': User;
 
     //agregarlos nulleables
     @Column({ nullable: true })
@@ -82,7 +94,7 @@ export class Operation {
 
     //obligatorio, despues de aplicar trim tiene que tener entre 1 y 255. 
     //se usa como frontend como titulo
-    @Column()
+    @Column({ nullable: true })
     'flight_comments': string;
 
     @Column({ nullable: true })
@@ -157,6 +169,11 @@ export class Operation {
     @Column(type => PriorityElements)
     // @JoinColumn()
     'priority_elements'?: PriorityElements;
+
+
+    // @OneToOne("OperationIntersections", { lazy: true, cascade: true })
+    // // @JoinColumn()
+    // 'operation_inserctions'?: OperationIntersections
 
 
     //es nuleable

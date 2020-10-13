@@ -21,7 +21,10 @@ describe('>>> Restricted Flight VOlume volume reservation entity <<< ', function
     before(function (done) {
         this.timeout(TEST_TIMEOUT);
         initAsync()
-            .then(done)
+            // .then(done)
+            .then((function(application){
+                done()
+            }))
             .catch(done)
     })
 
@@ -107,7 +110,9 @@ describe('>>> Restricted Flight VOlume volume reservation entity <<< ', function
         }
 
         let op = Object.assign({}, deepCopy(Operations[0]))
-        op.gufi = undefined
+        delete op.gufi 
+
+        // op.gufi = undefined
         op.uas_registrations = []
         op.flight_comments = "For automate Testing RFV "
         op.state = OperationState.PROPOSED

@@ -7,10 +7,12 @@ import { PositionController } from "./restControllers/PositionController";
 import { UASVolumeReservationController } from "./restControllers/UASVolumeReservationController";
 import { NotamController } from "./restControllers/NotamRestController";
 import { RestrictedFlightVolumeController } from "./restControllers/RestrictedFlightVolumeController";
+import { MailController } from "./restControllers/MailController";
 
 import { checkJwt } from "./middleware/checkJwt";
+import { QuickFlyController } from "./restControllers/QuickFly";
 
-interface CustomRoute{
+interface CustomRoute {
     method: string
     route: string
     controller: any
@@ -48,35 +50,49 @@ const doRoutes = (route: String, Dao: any) => {
 }
 
 let operations = [
-{
-    method: "post",
-    route: `/operation/geo`,
-    controller: OperationController,
-    action: "getOperationByPoint",
-    middlewares: [checkJwt]  
-},
-{
-    method: "post",
-    route: `/operation/volume`,
-    controller: OperationController,
-    action: "getOperationByVolumeOperation",
-    middlewares: [checkJwt]  
-},
-{
-    method: "get",
-    route: `/operation/creator`,
-    controller: OperationController,
-    action: "operationsByCreator",
-    middlewares: [checkJwt]  
-},
-{
-    method: "post",
-    route: `/operation/:id/pendingtoaccept`,
-    controller: OperationController,
-    action: "acpetPendingOperation",
-    middlewares: [checkJwt]
-},
-...doRoutes("operation", OperationController)]
+    {
+        method: "post",
+        route: `/operation/geo`,
+        controller: OperationController,
+        action: "getOperationByPoint",
+        middlewares: [checkJwt]
+    },
+    {
+        method: "post",
+        route: `/operation/volume`,
+        controller: OperationController,
+        action: "getOperationByVolumeOperation",
+        middlewares: [checkJwt]
+    },
+    {
+        method: "get",
+        route: `/operation/creator`,
+        controller: OperationController,
+        action: "operationsByCreator",
+        middlewares: [checkJwt]
+    },
+    {
+        method: "get",
+        route: `/operation/owner`,
+        controller: OperationController,
+        action: "operationsByOwner",
+        middlewares: [checkJwt]
+    },
+    {
+        method: "post",
+        route: `/operation/:id/pendingtoaccept`,
+        controller: OperationController,
+        action: "acpetPendingOperation",
+        middlewares: [checkJwt]
+    },
+    {
+        method: "post",
+        route: `/operation/:id/updatestate`,
+        controller: OperationController,
+        action: "updateState",
+        middlewares: [checkJwt]
+    },
+    ...doRoutes("operation", OperationController)]
 
 let user = [
     {
@@ -85,6 +101,20 @@ let user = [
         controller: UserController,
         action: "userRegister",
         // middlewares: [checkJwt]  
+    },
+    {
+        method: "put",
+        route: `/user/info/:id`,
+        controller: UserController,
+        action: "updateUser",
+        middlewares: [checkJwt]
+    },
+    {
+        method: "put",
+        route: `/user/password/:id`,
+        controller: UserController,
+        action: "updateUserPassword",
+        middlewares: [checkJwt]
     },
     {
         method: "post",
@@ -101,20 +131,41 @@ let auth = [{
     route: `/auth/login`,
     controller: AuthController,
     action: "login"
-    
+
 }]
 
-let r : CustomRoute[] = [
+let mail = [{
+    method: "post",
+    route: "/mail/pending",
+    controller: MailController,
+    action: "sendMailForPendingOperation",
+    middlewares: [checkJwt],
+}]
+
+let positions = [
+    {
+        method: "post",
+        route: "/position/drone",
+        controller: PositionController,
+        action: "savePositionWithDrone",
+        middlewares: [checkJwt],
+    },
+    ...doRoutes("position", PositionController),
+]
+
+let r: CustomRoute[] = [
     ...user, // ...doRoutes("user",UserController),
     ...doRoutes("notam", NotamController),
     ...doRoutes("utmmessage", UTMMessageController),
-    ...doRoutes("vehicle", VehicleController), 
-    ...doRoutes("position", PositionController), 
-    ...doRoutes("uasvolume", UASVolumeReservationController), 
-    ...doRoutes("restrictedflightvolume", RestrictedFlightVolumeController), 
-    
-    ...operations, 
-    ...auth
+    ...doRoutes("vehicle", VehicleController),
+    ...doRoutes("uasvolume", UASVolumeReservationController),
+    ...doRoutes("restrictedflightvolume", RestrictedFlightVolumeController),
+    ...doRoutes("quickfly", QuickFlyController),
+
+    ...positions,
+    ...operations,
+    ...auth,
+    ...mail,
 ];
 
 // if(process.env.NODE_ENV == "dev"){
@@ -140,5 +191,5 @@ let r : CustomRoute[] = [
 //     r.push(testRoute)
 //     r.push(testRoute2)
 // }
-  
+
 export const Routes = r;
