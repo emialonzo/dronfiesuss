@@ -24,19 +24,88 @@ jobs:
 
     - uses: actions/checkout@v2
       
-        
+    - name: Build the stack
+      run: docker-compose up -d
+              
     - uses: DamianReeves/write-file-action@v1.0
       with:
         path: .coveralls.yml
         contents: |
-          service_name: travis-ci
-          repo_token: aaOgzZXrfQU6Lm1SES8Zc0WS5TqjyfWX3
+          service_name: github-action
+          repo_token: ${{ secrets.COVERALLS_TOKEN }}
         write-mode:   overwrite
 
-    - run: cat .coveralls.yml
-    
-    - name: Build the stack
-      run: docker-compose up -d
+    - uses: DamianReeves/write-file-action@v1.0
+      with:
+        path: .env
+        contents: |
+          PORT=3000
+          DATABASE_CONNECTION_NAME=dev
+          JWTSECRET=asdfasdasdfasdff  
+          JWT_EXPIRATION_TIME=1h
+          SMTP_URL=localhost
+          SMTP_PORT=1025
+          SMTP_USERNAME=prueba@prueba.com
+          SMTP_PASSWORD=prueba
+          TEST_TIMEOUT=5000
+        write-mode:   overwrite
+      
+    - uses: DamianReeves/write-file-action@v1.0
+      with:
+        path: ormconfig.json
+        contents: |
+          [{
+           "name": "test",
+           "type": "postgres",
+           "host": "localhost",
+           "port": 5432,
+           "username": "test",
+           "password": "test",
+           "database": "test",
+           "synchronize": true,
+           "dropSchema": true,
+           "logging": false,
+           "entities": [
+              "src/entities/**/*.ts"
+           ],
+           "migrations": [
+              "src/migration/**/*.ts"
+           ],
+           "subscribers": [
+              "src/subscriber/**/*.ts"
+           ],
+           "cli": {
+              "entitiesDir": "src/entities",
+              "migrationsDir": "src/migration",
+              "subscribersDir": "src/subscriber"
+           }
+          },{
+           "name": "dev",
+           "type": "postgres",
+           "host": "localhost",
+           "port": 5432,
+           "username": "test",
+           "password": "test",
+           "database": "test",
+           "synchronize": true,
+           "dropSchema": true,
+           "logging": false,
+           "entities": [
+              "src/entities/**/*.ts"
+           ],
+           "migrations": [
+              "src/migration/**/*.ts"
+           ],
+           "subscribers": [
+              "src/subscriber/**/*.ts"
+           ],
+           "cli": {
+              "entitiesDir": "src/entities",
+              "migrationsDir": "src/migration",
+              "subscribersDir": "src/subscriber"
+           }
+          }]
+        write-mode:   overwrite
 
     - uses: actions/setup-node@v2-beta
       with:
@@ -44,7 +113,9 @@ jobs:
 
     - run: npm install
     
+    - run: cat ormconfig.json
+    
+    - run: ./node_modules/.bin/fake-smtp-server  -a prueba@prueba.com:prueba &
+    
     - name: run app
-      run: npm run coverage
-
-
+      run: npm run coveralls
